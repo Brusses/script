@@ -36,8 +36,6 @@ def ChannelUniqueAuthors():
     container = tab.create_container(type="rows", gap=2)
 
     controls = container.create_card(gap=2)
-    controls.create_ui_element(UI.Text, content="Unique Authors", size="lg", weight="bold")
-
     server_select = controls.create_ui_element(
         UI.Select,
         label="Serwer",
