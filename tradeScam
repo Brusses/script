@@ -17,30 +17,6 @@ def ChannelUniqueAuthors():
             })
         return items
 
-    def copy_to_clipboard(text):
-        if not text:
-            return False
-
-        for method in (
-            lambda: setClipboard(text),
-            lambda: clipboard.write(text),
-            lambda: bot.copy(text),
-        ):
-            try:
-                method()
-                return True
-            except Exception:
-                pass
-
-        try:
-            import pyperclip
-            pyperclip.copy(text)
-            return True
-        except Exception:
-            pass
-
-        return False
-
     tab = Tab(name="Moderation Tools", title="Unique Authors", icon="shield", gap=2)
     container = tab.create_container(type="rows", gap=2)
     top = container.create_container(type="columns", gap=2)
@@ -68,11 +44,11 @@ def ChannelUniqueAuthors():
     action_card.create_ui_element(UI.Text, content="Akcje", size="lg", weight="bold")
     limit_input = action_card.create_ui_element(UI.Input, label="Limit użytkowników", placeholder="np. 25")
     fetch_button = action_card.create_ui_element(UI.Button, label="Pobierz listę", variant="cta", full_width=True)
-    copy_button = action_card.create_ui_element(UI.Button, label="Skopiuj wszystko", variant="flat", full_width=True)
 
     results_card = container.create_card(gap=1)
     results_card.create_ui_element(UI.Text, content="Wynik", size="lg", weight="bold")
     result_text = results_card.create_ui_element(UI.Text, content="Brak danych.", size="sm")
+    result_select = results_card.create_ui_element(UI.Input, label="Zaznacz i skopiuj ręcznie", placeholder="Tutaj pojawi się wynik", full_width=True)
 
     def update_channel_list(selected_server_ids):
         if not selected_server_ids or selected_server_ids[0] in ["", "select_server"]:
@@ -135,31 +111,23 @@ def ChannelUniqueAuthors():
 
             if not mentions:
                 result_text.content = "Nie znaleziono autorów wiadomości."
+                result_select.value = ""
                 tab.toast(type="INFO", title="Gotowe", description="Brak wyników.")
                 return
 
             result_text.content = "\n".join(mentions)
+            result_select.value = " ".join(mentions)
             tab.toast(type="SUCCESS", title="Gotowe", description=f"Znaleziono {len(mentions)} unikalnych autorów.")
         except Exception as e:
             result_text.content = f"Wystąpił błąd: {e}"
+            result_select.value = ""
             tab.toast(type="ERROR", title="Błąd", description="Nie udało się pobrać autorów.")
         finally:
             fetch_button.loading = False
 
-    async def copy_all_results():
-        text = result_text.content if result_text.content and result_text.content != "Brak danych." else ""
-        if not text:
-            tab.toast(type="ERROR", title="Brak danych", description="Najpierw pobierz listę.")
-            return
-
-        if copy_to_clipboard(text):
-            tab.toast(type="SUCCESS", title="Skopiowano", description="Wszystkie wyniki zostały skopiowane.")
-        else:
-            tab.toast(type="ERROR", title="Błąd", description="Nie udało się skopiować do schowka.")
 
     server_select.onChange = update_channel_list
     fetch_button.onClick = fetch_unique_authors
-    copy_button.onClick = copy_all_results
 
     tab.render()
 
