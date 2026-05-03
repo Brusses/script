@@ -35,6 +35,18 @@ def ChannelUniqueAuthors():
         full_width=True
     )
 
+    role_card = top.create_card(gap=2)
+    role_card.create_ui_element(UI.Text, content="Filtr roli (online)", size="lg", weight="bold")
+    role_filter_toggle = role_card.create_ui_element(UI.Toggle, label="Włącz filtr roli")
+    role_select = role_card.create_ui_element(
+        UI.Select,
+        label="Rola",
+        items=[{"id": "select_role", "title": "Najpierw wybierz serwer"}],
+        disabled_items=["select_role"],
+        mode="single",
+        full_width=True
+    )
+
     action_card = top.create_card(gap=2)
     action_card.create_ui_element(UI.Text, content="Akcje", size="lg", weight="bold")
     limit_input = action_card.create_ui_element(UI.Input, label="Limit użytkowników", placeholder="np. 25")
@@ -50,20 +62,31 @@ def ChannelUniqueAuthors():
         if not selected_server_ids or selected_server_ids[0] in ["", "select_server"]:
             channel_select.items = [{"id": "select_channel", "title": "Najpierw wybierz serwer"}]
             channel_select.disabled_items = ["select_channel"]
+            role_select.items = [{"id": "select_role", "title": "Najpierw wybierz serwer"}]
+            role_select.disabled_items = ["select_role"]
             return
 
         guild = bot.get_guild(int(selected_server_ids[0]))
         if not guild:
             channel_select.items = [{"id": "select_channel", "title": "Nie udało się pobrać kanałów"}]
             channel_select.disabled_items = ["select_channel"]
+            role_select.items = [{"id": "select_role", "title": "Nie udało się pobrać ról"}]
+            role_select.disabled_items = ["select_role"]
             return
 
-        items = [{"id": "select_channel", "title": "Wybierz kanał"}]
+        channels = [{"id": "select_channel", "title": "Wybierz kanał"}]
         for ch in guild.text_channels:
-            items.append({"id": str(ch.id), "title": f"#{ch.name}"})
-
-        channel_select.items = items
+            channels.append({"id": str(ch.id), "title": f"#{ch.name}"})
+        channel_select.items = channels
         channel_select.disabled_items = ["select_channel"]
+
+        roles = [{"id": "select_role", "title": "Wybierz rolę (opcjonalnie)"}]
+        for role in guild.roles:
+            if role.is_default():
+                continue
+            roles.append({"id": str(role.id), "title": f"@{role.name}"})
+        role_select.items = roles
+        role_select.disabled_items = ["select_role"]
 
     async def fetch_unique_authors():
         if not server_select.selected_items or server_select.selected_items[0] in ["", "select_server"]:
@@ -131,17 +154,40 @@ def ChannelUniqueAuthors():
             tab.toast(type="ERROR", title="Błąd", description="Nie można pobrać serwera.")
             return
 
+        target_role = None
+        if role_filter_toggle.checked:
+            if not role_select.selected_items or role_select.selected_items[0] in ["", "select_role"]:
+                tab.toast(type="ERROR", title="Błąd", description="Włączono filtr roli, ale nie wybrano roli.")
+                return
+            target_role = guild.get_role(int(role_select.selected_items[0]))
+            if not target_role:
+                tab.toast(type="ERROR", title="Błąd", description="Wybrana rola nie istnieje.")
+                return
+
+        members = []
+        try:
+            async for m in guild.fetch_members(limit=None):
+                members.append(m)
+        except Exception:
+            members = list(guild.members)
+
         online_mentions = []
-        for member in guild.members:
+        for member in members:
             try:
                 status = str(member.status).lower()
             except Exception:
                 status = "offline"
-            if status != "offline":
-                online_mentions.append(f"<@{member.id}>")
+
+            if status == "offline":
+                continue
+
+            if target_role and target_role not in member.roles:
+                continue
+
+            online_mentions.append(f"<@{member.id}>")
 
         if not online_mentions:
-            result_text.content = "Brak użytkowników online."
+            result_text.content = "Brak użytkowników online dla tego filtra."
             result_select.value = ""
             tab.toast(type="INFO", title="Gotowe", description="Brak użytkowników online.")
             return
@@ -149,7 +195,6 @@ def ChannelUniqueAuthors():
         result_text.content = "\n".join(online_mentions)
         result_select.value = " ".join(online_mentions)
         tab.toast(type="SUCCESS", title="Gotowe", description=f"Online: {len(online_mentions)} użytkowników.")
-
 
     server_select.onChange = update_channel_list
     fetch_button.onClick = fetch_unique_authors
