@@ -1,9 +1,4 @@
-@nightyScript(
-    name="Channel Unique Authors",
-    author="0pyr",
-    description="Collects unique message authors from a selected text channel",
-    usage="Select server, channel and limit, then click Fetch"
-)
+@nightyScript(name="Channel Unique Authors", author="0pyr", description="Collects unique message authors from a selected text channel", usage="Select server, channel and limit, then click Fetch")
 def ChannelUniqueAuthors():
     import asyncio
 
