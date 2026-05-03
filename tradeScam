@@ -55,7 +55,7 @@ def ChannelUniqueAuthors():
     limit_input = controls.create_ui_element(UI.Input, label="Limit użytkowników", placeholder="np. 25")
 
     fetch_button = controls.create_ui_element(UI.Button, label="Pobierz listę", variant="cta", full_width=True)
-    copy_button = controls.create_ui_element(UI.Button, label="Skopiuj wszystko", variant="secondary", full_width=True)
+    copy_button = controls.create_ui_element(UI.Button, label="Skopiuj wszystko", variant="flat", full_width=True)
 
     results_card = container.create_card(gap=1)
     results_card.create_ui_element(UI.Text, content="Wynik", size="lg", weight="bold")
